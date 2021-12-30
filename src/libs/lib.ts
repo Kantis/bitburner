@@ -1,5 +1,6 @@
 import * as std from '/libs/std.js'
-import { BitBurner as NS } from 'Bitburner'
+import { BitBurner as NS, Host } from 'Bitburner'
+import { Tree, TreeNode } from '/libs/trees.js'
 
 /** @param {NS} ns **/
 export async function printHello(ns: NS) {
@@ -31,35 +32,41 @@ export interface Server {
 	growthParam: number
 }
 
-export function deepscan(ns: NS): Server[] {
-	let servers = Array<Server>()
+export function deepscan(ns: NS): Tree<Server> {
+	let visited: Host[] = ['home']
 
-	function recurse(node: string) {
-		let newServers = ns.scan(node)
+	function toServer(host: Host): Server {
+		return {
+			name: host,
+			level: ns.getServerRequiredHackingLevel(host),
+			maxMoney: ns.getServerMaxMoney(host),
+			maxRam: ns.getServerMaxRam(host),
+			minSecurity: ns.getServerMinSecurityLevel(host),
+			growthParam: ns.getServerGrowth(host)
+		}
+	}
 
-		newServers
-			.filter(s => servers.filter(x => x.name == s).length == 0)
-			.forEach(s => {
-				if (servers.filter(x => x.name == s).length == 0) {
-					servers.push(
-						{
-							'parent': node,
-							'name': s,
-							'level': ns.getServerRequiredHackingLevel(s),
-							'maxMoney': ns.getServerMaxMoney(s),
-							'maxRam': ns.getServerMaxRam(s),
-							'minSecurity': ns.getServerMinSecurityLevel(s),
-							'growthParam': ns.getServerGrowth(s)
-						}
-					)
+	function recurse(node: Host): TreeNode<Server>[] {
+		let children = ns.scan(node)
+
+		return children
+			.filter(s => visited.filter(x => x == s).length == 0)
+			.map(s => {
+				visited.push(s)
+				
+				return {
+					value: toServer(s),
+					children: recurse(s)
 				}
-				recurse(s)
 			})
 	}
 
-	recurse('home')
-
-	return std.uniq(servers)
+	return new Tree(
+		{
+			value: { name: 'home', level: 0, maxMoney: 0, maxRam: ns.getServerMaxRam('home'), minSecurity: 100, growthParam: 0 },
+			children: recurse('home')
+		}
+	)
 }
 
 export function findJuicyTarget(ns: NS, servers: Server[]) {

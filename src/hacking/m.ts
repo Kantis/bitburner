@@ -1,8 +1,8 @@
-import { deepscan, freeRam, maxThreads } from '../libs/lib'
+import { deepscan, freeRam, maxThreads } from '/libs/lib.js'
 import { BitBurner as NS } from 'Bitburner'
+import { Analyzer } from '/hacking/analyze.js'
 
 const HOME_RESERVED_RAM = 10
-const minGrowThreshold = 1.05
 const allowHackThreshold = 1.4
 
 class Script {
@@ -10,7 +10,7 @@ class Script {
 	static Grow = new Script('grow.js')
 	static Hack = new Script('hack.js')
 
-    public name: string
+	public name: string
 
 	constructor(name: string) {
 		this.name = name
@@ -20,27 +20,10 @@ class Script {
 /** @param {NS} ns **/
 export async function main(ns: NS) {
 	const target = ns.args[0]
-	const securityPerWeaken = -1.0 * ns.weakenAnalyze(1)
-	
-	function countWeaken(hostname: string) {
-		let currentSecurity = ns.getServerSecurityLevel(hostname)
-		let minimumSecurity = ns.getServerMinSecurityLevel(hostname)
-		ns.print(ns.sprintf('%3.2f ->> %3.2f', currentSecurity, minimumSecurity))
-		const result = -1 * (currentSecurity - minimumSecurity) / securityPerWeaken
-		ns.print(ns.sprintf('Result: %d', result))
-		return result
-	}
-
-	function countGrows() {
-		let avail = ns.getServerMoneyAvailable(target)
-		if (avail < 100) return 1e9
-		let maxFactor = ns.getServerMaxMoney(target) / ns.getServerMoneyAvailable(target)
-		if (maxFactor < minGrowThreshold) return 0
-		return ns.growthAnalyze(target, maxFactor)
-	}
+	const analyzer = new Analyzer(ns)
 
 	function availableServers() {
-		return deepscan(ns).filter(s => ns.hasRootAccess(s.name))
+		return deepscan(ns).flatten().filter(s => ns.hasRootAccess(s.name))
 		//.filter(s => s.name != 'home')
 	}
 
@@ -61,21 +44,7 @@ export async function main(ns: NS) {
 		startScript(Script.Weaken, hostname, counts.w)
 	}
 
-	function requiredGrowsPerHack() {
-		return ns.growthAnalyze(target, 1.0 + ns.hackAnalyze(target)) 
-	}
-
-	function requiredWeakenPerHack() {
-		return -1.0 * ns.hackAnalyzeSecurity(1) / securityPerWeaken
-
-	}
-
-	function requiredWeakenPerGrow() {
-		let result =-1.0 * ns.growthAnalyzeSecurity(1) / securityPerWeaken * 10.0 // Temp 2x modifier , since sec is rising
-		return  result
-	}
-
-	async function ds() {
+	async function distributeScripts() {
 		for (const s of availableServers()) {
 			await ns.scp(['grow.js', 'hack.js', 'weaken.js'], 'home', s.name)
 		}
@@ -100,20 +69,17 @@ export async function main(ns: NS) {
 	}
 
 	function calcReq() {
-		return {w: countWeaken(target), g: countGrows()}
+		return {
+			w: analyzer.countWeaken(target),
+			g: analyzer.countGrows(target)
+		}
 	}
-	
+
 	var require = calcReq()
 	let iteration = 0
 
-	ns.enableLog('growthAnalyze')
-	ns.disableLog('getServerMaxRam')
-	ns.disableLog('getServerUsedRam')
-	ns.disableLog('sleep')
-	ns.disableLog('exec')
-
 	while (true) {
-		await ds()
+		await distributeScripts()
 		iteration++
 		if (iteration % 10 == 0) {
 			require = calcReq()
@@ -128,7 +94,7 @@ export async function main(ns: NS) {
 			const toRun = { h: 0, g: 0, w: 0 }
 			var free = freeRam(ns, s.name)
 			if (s.name == 'home') free -= HOME_RESERVED_RAM
-			
+
 			while (free > 0) {
 				const script = nextScript()
 				const cost = ns.getScriptRam(script.name)
@@ -139,14 +105,14 @@ export async function main(ns: NS) {
 					case Script.Hack:
 						if (canHack) {
 							toRun.h += 1
-							require.w += requiredWeakenPerHack()
-							require.g += requiredGrowsPerHack()
+							require.w += analyzer.requiredWeakenPerHack()
+							require.g += analyzer.requiredGrowsPerHack(target)
 						}
 						break
 					case Script.Grow:
 						if (canGrow) {
 							toRun.g += 1
-							require.w += requiredWeakenPerGrow()
+							require.w += analyzer.requiredWeakenPerGrow()
 							require.g -= 1
 						}
 						break
@@ -161,7 +127,7 @@ export async function main(ns: NS) {
 
 			runScripts(s.name, toRun)
 		})
-		
+
 		await ns.sleep(1000)
 	}
 }

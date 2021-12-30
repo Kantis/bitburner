@@ -18,7 +18,7 @@ export async function main(ns: NS) {
     }
 
 	function purchasableShares(ticker: StockSymbol) {
-		const availableMoney = ns.getServerMoneyAvailable('home')
+		const availableMoney = ns.getServerMoneyAvailable('home') * 0.5
 		const [ownedShares] = ns.stock.getPosition(ticker)
 		const availableShares = ns.stock.getMaxShares(ticker) - ownedShares
 		const stockPrice = ns.stock.getAskPrice(ticker)
@@ -97,7 +97,7 @@ export async function main(ns: NS) {
 		}
 	}
 
-	ns.disableLog('ALL')
+	ns.enableLog('ALL')
 
 	if (!(ns.getOwnedSourceFiles().some(s => s.n == 8 && s.lvl > 1))) {
 		ns.print('Disabling shorting since required Source-File (8-2) was not found')

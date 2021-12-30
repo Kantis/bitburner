@@ -40,6 +40,7 @@ export async function main(ns: NS) {
 		const servers = deepscan(ns)
 
 		servers
+			.flatten()
 			.filter(s => s.level <= hackingLevel)
 			.filter(s => !ns.hasRootAccess(s.name))
 			.filter(s => ns.getServerNumPortsRequired(s.name) <= availablePortHacks())
