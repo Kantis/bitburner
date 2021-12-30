@@ -1,9 +1,9 @@
-import * as std from './std'
+import * as std from '/libs/std.js'
 import { BitBurner as NS } from 'Bitburner'
 
 /** @param {NS} ns **/
 export async function printHello(ns: NS) {
-	ns.tprint('hello')
+	ns.tprint('hello 3')
 }
 
 export function printServerTree(ns: NS) {

@@ -1,9 +1,9 @@
-import * as lib from './lib'
+import { deepscan } from '../libs/lib'
 import { BitBurner as NS } from 'Bitburner'
 
 /** @param {NS} ns **/
 export async function main(ns: NS) {
-    let servers = lib.deepscan(ns)
+    let servers = deepscan(ns)
     
     ns.tprintf('+-----------------------+---------+----------+--------+----------+----------+')
     ns.tprintf('|   Name                |   $$$   | Hackable | Growth |  G.Time  | Security |')

@@ -1,4 +1,4 @@
-import { deepscan, freeRam, maxThreads } from './lib'
+import { deepscan, freeRam, maxThreads } from '../libs/lib'
 import { BitBurner as NS } from 'Bitburner'
 
 const HOME_RESERVED_RAM = 10

@@ -1,4 +1,4 @@
-import { BitBurner as NS, GangEquipment, GangEquipmentType, GangName } from 'Bitburner';
+import { BitBurner as NS, GangAugmentations, GangEquipment, GangEquipmentType, GangName } from 'Bitburner';
 
 const OWN_GANG = 'Slum Snakes'
 const ascensionThreshold = 2.0
@@ -41,7 +41,7 @@ export async function main(ns: NS) {
 			.reduce(add, 0)
 	}
 
-	function shouldPurchaseEquipment(equip: GangEquipment) {
+	function shouldPurchaseEquipment(equip: GangEquipment | GangAugmentations) {
         const typesToPurchase: GangEquipmentType[] = ['Armor', 'Weapon', 'Vehicle']
 		return (
 				typesToPurchase.indexOf(ns.gang.getEquipmentType(equip)) != -1 && 
