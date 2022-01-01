@@ -1,4 +1,5 @@
 import { BitBurner as NS, StockSymbol } from "Bitburner"
+import { getReservedMoney } from "/libs/ports.js"
 
 var shortingEnabled = true
 const purchasingEnabled = true
@@ -18,7 +19,9 @@ export async function main(ns: NS) {
     }
 
 	function purchasableShares(ticker: StockSymbol) {
-		const availableMoney = ns.getServerMoneyAvailable('home') * 0.5
+		const moneyBuffer = getReservedMoney(ns)
+		ns.tprintf('Money buffer: %s', String(moneyBuffer))
+		const availableMoney = Math.max(ns.getServerMoneyAvailable('home') - moneyBuffer, 0)
 		const [ownedShares] = ns.stock.getPosition(ticker)
 		const availableShares = ns.stock.getMaxShares(ticker) - ownedShares
 		const stockPrice = ns.stock.getAskPrice(ticker)

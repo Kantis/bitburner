@@ -1,11 +1,7 @@
 import * as std from '/libs/std.js'
 import { BitBurner as NS, Host } from 'Bitburner'
 import { Tree, TreeNode } from '/libs/trees.js'
-
-/** @param {NS} ns **/
-export async function printHello(ns: NS) {
-	ns.tprint('hello 3')
-}
+import { format } from 'path/posix'
 
 export function printServerTree(ns: NS) {
 	let visited = Array<string>()

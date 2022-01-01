@@ -1,5 +1,5 @@
 import { BitBurner } from 'Bitburner'
-import { range } from '/libs/std.js'
+import { add, range } from '/libs/std.js'
 
 /**
  * Algorithmic Stock Trader IV
@@ -29,4 +29,20 @@ export function localMaxIndexes(numbers: number[]): number[] {
     }
 
     return range(numbers.length).filter(isLocalMax)
+}
+
+export function localMinIndexes(numbers: number[]): number[] {
+    function isLocalMin(index: number) {
+        return (index == numbers.length - 1 || numbers[index] < numbers[index + 1]) && (index == 0 || numbers[index] < numbers[index - 1])
+    }
+
+    return range(numbers.length).filter(isLocalMin)
+}
+
+export function maxProfit(prices: number[]) {
+
+    const maximums = localMaxIndexes(prices)
+    const minimums = localMinIndexes(prices)
+
+    return maximums.map(i => prices[i]).reduce(add) - minimums.map(i => prices[i]).reduce(add)
 }

@@ -1,88 +1,52 @@
 import { BitBurner } from "Bitburner";
-import { deepscan, printServerTree } from "/libs/lib.js";
+import { cli, Command } from "/libs/cli.js"
 
-interface Command {
-    invocation: string
-    description: string
+const commands: Command[] = [
+    { 
+        invocation: 'rig', 
+        aliases: [],
+        description: 'creates a new hn-server. Optional arg: max fraction of money to use, e.g. 0.5 to use maximum 50% of available money', 
+        script: '/programs/rig.js'
+    }, {
+        invocation: 'fmem', 
+        aliases: [],
+        description: 'Lists free memory on a given server, or home if no argument supplied', 
+        script: '/programs/fmem.js'
+    }, {
+        invocation: 'gmem', 
+        aliases: [],
+        description: 'shows global memory utilization', 
+        script: '/programs/gmem.js'
+    }, {
+        invocation: 'path', 
+        aliases: [],
+        description: 'prints the path to a given server', 
+        script: '/programs/path.js'
+    }, {
+        invocation: 'print-servers',
+        aliases: ['pserv'],
+        description: 'lists the hierarchy of servers',
+        script: '/programs/servertree.js'
+    }, {
+        invocation: 'connect',
+        aliases: ['c'],
+        description: 'connects to the given server',
+        script: '/programs/connect.js'
+    }, {
+        invocation: 'find-contracts',
+        aliases: ['fc'],
+        description: 'lists available contracts',
+        script: '/programs/find-contracts.js'
+    }
+]
+
+export function autocomplete(data: any, args: string[]) {
+    if (args[0] === 'c' || args[0] === 'connect') {
+        return [...data.servers]
+    }    
+    return []
 }
-
-const commands = Array<Command>(
-    { invocation: 'rig <name>', description: 'rigs a new server using as much money as possible' },
-    { invocation: 'fmem', description: 'lists available memory on home' },
-    { invocation: 'print-servers [host]', description: 'prints the network graph. If host is supplied, only prints the path to the host' },
-    { invocation: 'find-contracts', description: 'lists servers having coding contracts on them' },
-)
-
+    
 export async function main(ns: BitBurner) {
-
-    async function rigServer(name: string, maxMoney?: number) {
-        const money = maxMoney ?? ns.getServerMoneyAvailable('home')
-        var ram = 20
-
-        while (ns.getPurchasedServerCost(Math.pow(2, ram)) > money && ram > 0) {
-            const cost = ns.getPurchasedServerCost(Math.pow(2, ram))
-            ns.tprintf('Cant afford server with 2^%d ram, trying next level. Cost: %20d - Have: %20d', ram, cost, money)
-            ram--
-            await ns.sleep(100)
-        }
-
-        ns.tprint(ram)
-        ns.purchaseServer(name, Math.pow(2, ram))
-    }
-
-    function findContracts(ns: BitBurner) {
-        const servers = deepscan(ns)
-
-        for (const s of servers.flatten()) {
-            const contracts = ns.ls(s.name, '.cct')
-            for (const c of contracts) {
-                ns.tprintf('%-20s %s', s.name, c)
-            }
-        }
-    }
-
-    const cmd = ns.args[0]
-    const otherArgs = ns.args.slice(1)
-
-    switch (cmd) {
-        case 'rig':
-            if (ns.args.length < 2) {
-                ns.tprint('usage: rig <host>')
-                return 1
-            }
-            await rigServer(ns.args[1])
-            break
-
-        case 'fmem':
-            ns.tprintf('%0.2f GB', ns.getServerMaxRam('home') - ns.getServerUsedRam('home'))
-            break
-
-        case 'print-servers':
-            printServerTree(ns)
-            break
-
-        case 'path':
-            deepscan(ns).path(s => s.value.name == ns.args[1])?.forEach(c =>
-                ns.tprint(c.value.name)
-            )
-            break
-
-        case 'find-contracts':
-            findContracts(ns)
-            break
-
-        default:
-            ns.tprintf("Unknown command '%s'", cmd)
-            ns.tprint('')
-            ns.tprintf('Available commands: ')
-
-            const longestInvocation = Math.max(...commands.map(c => c.invocation.length))
-
-            commands.forEach(c => {
-                ns.tprintf('- %-' + longestInvocation + 's : %s', c.invocation, c.description)
-            })
-            break
-    }
-
-    return 0
+    cli(ns, commands)
 }

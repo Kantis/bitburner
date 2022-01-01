@@ -5,9 +5,9 @@ import { BitBurner as NS } from 'Bitburner'
 export async function main(ns: NS) {
     let servers = deepscan(ns)
 
-    ns.tprintf('+-----------------------+-----------------+----------+--------+----------+------------+')
-    ns.tprintf('|   Name                |       $$$       | Hackable | Growth |  W.Time  |  Security  |')
-    ns.tprintf('+-----------------------+-----------------+----------+--------+----------+------------+')
+    ns.tprintf('+-----------------------+------------------+----------+--------+----------+------------+')
+    ns.tprintf('|   Name                |        $$$       | Hackable | Growth |  W.Time  |  Security  |')
+    ns.tprintf('+-----------------------+------------------+----------+--------+----------+------------+')
 
     servers
         .flatten()
@@ -15,9 +15,9 @@ export async function main(ns: NS) {
         .sort((a, b) => ns.getServerMaxMoney(a.name) - ns.getServerMaxMoney(b.name))
         .forEach(s => {
             ns.tprintf(
-                '| %-21s | %6dM (%4.1f%%) | %8s | %6f | %7.0fs | %5.1f (%2d) |',
+                '| %-21s | %7s (%5.1f%%) | %8s | %6f | %7.0fs | %5.1f (%2d) |',
                 s.name,
-                ns.getServerMaxMoney(s.name) / 1000000,
+                ns.nFormat(ns.getServerMaxMoney(s.name), '0.0a'),
                 ns.getServerMoneyAvailable(s.name) / ns.getServerMaxMoney(s.name) * 100.0,
                 ns.hasRootAccess(s.name) ? 'Y' : 'N',
                 ns.getServerGrowth(s.name),
@@ -26,5 +26,5 @@ export async function main(ns: NS) {
                 ns.getServerMinSecurityLevel(s.name),
             )
         })
-    ns.tprintf('+-----------------------+-----------------+----------+--------+----------+------------+')
+    ns.tprintf('+-----------------------+------------------+----------+--------+----------+------------+')
 }

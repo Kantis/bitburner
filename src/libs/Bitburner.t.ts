@@ -409,6 +409,181 @@ declare module "Bitburner" {
     threads: number;
   }
 
+  export interface Player {
+    hacking: number;
+    hp: number;
+    max_hp: number;
+    strength: number;
+    defense: number;
+    dexterity: number;
+    agility: number;
+    charisma: number;
+    intelligence: number;
+    hacking_chance_mult: number;
+    hacking_speed_mult: number;
+    hacking_money_mult: number;
+    hacking_grow_mult: number;
+    hacking_exp: number;
+    strength_exp: number;
+    defense_exp: number;
+    dexterity_exp: number;
+    agility_exp: number;
+    charisma_exp: number;
+    hacking_mult: number;
+    strength_mult: number;
+    defense_mult: number;
+    dexterity_mult: number;
+    agility_mult: number;
+    charisma_mult: number;
+    hacking_exp_mult: number;
+    strength_exp_mult: number;
+    defense_exp_mult: number;
+    dexterity_exp_mult: number;
+    agility_exp_mult: number;
+    charisma_exp_mult: number;
+    company_rep_mult: number;
+    faction_rep_mult: number;
+    numPeopleKilled: number;
+    money: number;
+    city: string;
+    location: string;
+    companyName: string;
+    crime_money_mult: number;
+    crime_success_mult: number;
+    isWorking: boolean;
+    workType: string;
+    currentWorkFactionName: string;
+    currentWorkFactionDescription: string;
+    workHackExpGainRate: number;
+    workStrExpGainRate: number;
+    workDefExpGainRate: number;
+    workDexExpGainRate: number;
+    workAgiExpGainRate: number;
+    workChaExpGainRate: number;
+    workRepGainRate: number;
+    workMoneyGainRate: number;
+    workMoneyLossRate: number;
+    workHackExpGained: number;
+    workStrExpGained: number;
+    workDefExpGained: number;
+    workDexExpGained: number;
+    workAgiExpGained: number;
+    workChaExpGained: number;
+    workRepGained: number;
+    workMoneyGained: number;
+    createProgramName: string;
+    createProgramReqLvl: number;
+    className: string;
+    crimeType: string;
+    work_money_mult: number;
+    hacknet_node_money_mult: number;
+    hacknet_node_purchase_cost_mult: number;
+    hacknet_node_ram_cost_mult: number;
+    hacknet_node_core_cost_mult: number;
+    hacknet_node_level_cost_mult: number;
+    hasWseAccount: boolean;
+    hasTixApiAccess: boolean;
+    has4SData: boolean;
+    has4SDataTixApi: boolean;
+    bladeburner_max_stamina_mult: number;
+    bladeburner_stamina_gain_mult: number;
+    bladeburner_analysis_mult: number;
+    bladeburner_success_chance_mult: number;
+    bitNodeN: number;
+    totalPlaytime: number;
+    playtimeSinceLastAug: number;
+    playtimeSinceLastBitnode: number;
+    jobs: any;
+    factions: string[];
+    tor: boolean;
+  }
+
+  export interface Server {
+    /**
+     * How many CPU cores this server has. Maximum of 8.
+     * Affects magnitude of grow and weaken.
+     */
+    cpuCores: number;
+
+    /** Flag indicating whether the FTP port is open */
+    ftpPortOpen: boolean;
+
+    /** Flag indicating whether player has admin/root access to this server */
+    hasAdminRights: boolean;
+
+    /** Hostname. Must be unique */
+    hostname: string;
+
+    /** Flag indicating whether HTTP Port is open */
+    httpPortOpen: boolean;
+
+    /** IP Address. Must be unique */
+    ip: string;
+
+    /** Flag indicating whether player is curently connected to this server */
+    isConnectedTo: boolean;
+
+    /** RAM (GB) available on this server */
+    maxRam: number;
+
+    /**
+     * Name of company/faction/etc. that this server belongs to.
+     * Optional, not applicable to all Servers
+     */
+    organizationName: string;
+
+    /** RAM (GB) used. i.e. unavailable RAM */
+    ramUsed: number;
+
+    /** Flag indicating whether SMTP Port is open */
+    smtpPortOpen: boolean;
+
+    /** Flag indicating whether SQL Port is open */
+    sqlPortOpen: boolean;
+
+    /** Flag indicating whether the SSH Port is open */
+    sshPortOpen: boolean;
+
+    /** Flag indicating whether this is a purchased server */
+    purchasedByPlayer: boolean;
+
+    /** Flag indicating whether this server has a backdoor installed by a player */
+    backdoorInstalled: boolean;
+
+    /**
+     * Initial server security level
+     * (i.e. security level when the server was created)
+     */
+    baseDifficulty: number;
+
+    /** Server Security Level */
+    hackDifficulty: number;
+
+    /** Minimum server security level that this server can be weakened to */
+    minDifficulty: number;
+
+    /** How much money currently resides on the server and can be hacked */
+    moneyAvailable: number;
+
+    /** Maximum amount of money that this server can hold */
+    moneyMax: number;
+
+    /** Number of open ports required in order to gain admin/root access */
+    numOpenPortsRequired: number;
+
+    /** How many ports are currently opened on the server */
+    openPortCount: number;
+
+    /** Hacking level required to hack this server */
+    requiredHackingSkill: number;
+
+    /**
+     * Parameter that affects how effectively this server's money can
+     * be increased using the grow() Netscript function
+     */
+    serverGrowth: number;
+  }
+
   export interface CodingAttemptOptions {
     /** If truthy, then the function will return a string that states the contract’s reward when it is successfully solved. */
     returnReward: boolean;
@@ -3197,6 +3372,24 @@ declare module "Bitburner" {
     purchaseSleeveAug(sleeveNumber: number, augName: AugmentName): boolean;
   }
 
+  /**
+   * You need Formulas.exe on your home computer to use this API.
+   */
+  export interface Formulas {
+    readonly hacking: HackingFormulas;
+    readonly gang: GangFormulas;
+    readonly skills: SkillsFormulas;
+  }
+
+  export interface HackingFormulas {
+    growPercent(server: Server, threads: number, player: Player, cores?: number): number;
+    hackTime(server: Server, player: Player): number;
+    weakenTime(server: Server, player: Player): number;
+  }
+
+  export interface GangFormulas { }
+  export interface SkillsFormulas { }
+
   export interface BitBurner extends Singularity {
 
     /**
@@ -3225,11 +3418,18 @@ declare module "Bitburner" {
      * @ramCost 0 GB
      */
     readonly sleeve: CodingContract;
+    /**
+     * @ramCost 0 GB
+     */
+    readonly formulas: Formulas;
 
     /**
      * @ramCost 0 GB
      */
     readonly stock: TIX;
+
+    getServer(host: Host): Server;
+    getPlayer(): Player;
 
     /**
      * Arguments passed into a script can be accessed using a normal
@@ -3416,6 +3616,7 @@ declare module "Bitburner" {
      */
     tprint(msg: string | number | string[] | number[]): void;
     tprintf(msg: string | number | string[] | number[], ...args: any[]): void;
+    connect(host: Host): void;
 
     /**
      * Clears the script’s logs.
@@ -4179,6 +4380,9 @@ declare module "Bitburner" {
      */
     write(handle: Handle, data?: string | string[] | number, mode?: "w" | "a"): void;
 
+    clearPort(port: Port): void;
+    writePort(port: Port, data?: string | string[] | number): void;
+
     /**
      * Attempts to write data to the specified Netscript Port.
      * If the port is full, the data will not be written.
@@ -4499,6 +4703,6 @@ declare module "Bitburner" {
      * @ramCost 4 GB
      * @returns {object} Object containing the current BitNode multipliers.
      */
-    getBitNodeMultipliers(url: string, target: string, host: string): BitNodeMultipliers;
+    getBitNodeMultipliers(): BitNodeMultipliers;
   }
 }

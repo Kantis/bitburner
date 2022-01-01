@@ -1,6 +1,6 @@
 {
   "include": [
-    "src/**/*", "tests/**/*",
+    "src/**/*"
   ],
   "compilerOptions": {
     "module": "esnext",
@@ -11,7 +11,7 @@
     "esModuleInterop": true,
     "sourceMap": false,
     "strict": true,
-    "rootDir": ".",
+    "rootDir": "src/",
     "outDir": "dist/",
     "baseUrl": "src/",
     "paths": {
