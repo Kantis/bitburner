@@ -14,7 +14,16 @@ export function cli(ns: BitBurner, commands: Command[]) {
     const matchingCommand = firstOrNull(commands, it => cmd == it.invocation || it.aliases?.indexOf(cmd) !== -1)
 
     if (matchingCommand) {
-        ns.run(matchingCommand.script, 1, ...ns.args.slice(1))
+        const freeRam = ns.getServerMaxRam('home') - ns.getServerUsedRam('home') 
+        const requiredRam = ns.getScriptRam(matchingCommand.script)
+        if (freeRam < requiredRam) {
+            ns.tprintf('ERROR: Not enough memory to launch %s. Required %.2f GB but only %.2f GB available', matchingCommand.script, requiredRam, freeRam)
+        } else {
+            const pid = ns.run(matchingCommand.script, 1, ...ns.args.slice(1))
+            if (pid == 0) {
+                ns.tprintf('ERROR: Failed to launch %s', matchingCommand.script)
+            }
+        }
     } else {
         ns.tprintf("Unknown command '%s'", cmd)
         ns.tprint('')

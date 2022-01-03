@@ -1,9 +1,9 @@
 import { notStrictEqual } from "assert"
 
 /** @param {NS} ns **/
-export function range(endExclusive: number): number[] {
+export function range(startInclusive: number = 0, endExclusive: number): number[] {
 	if (endExclusive == 0) return []
-	return [...Array(Math.floor(endExclusive)).keys()]
+	return [...Array(Math.floor(endExclusive)).keys()].slice(startInclusive)
 }
 
 export function uniq<T>(a: T[]): T[] {
@@ -73,7 +73,7 @@ export function joinToString<T>(
 }
 
 export function repeat(s: string, times: number): string {
-	return joinToString(range(times).map(_ => s), { delimiter: '' }, i => i)
+	return joinToString(range(0, times).map(_ => s), { delimiter: '' }, i => i)
 }
 
 export type TextAlignment = 'Left' | 'Right' | 'Center'
@@ -102,4 +102,8 @@ export function firstOrNull<T>(ts: T[], predicate: (t: T) => boolean): (T | unde
 		if (predicate(t)) return t		
 	}
 	return undefined
+}
+
+export function nextSecond(millis: number): number {
+	return millis + (1000 - millis % 1000)
 }

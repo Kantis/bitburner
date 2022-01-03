@@ -13,21 +13,20 @@ const commission = 100_000
 /** @param {NS} ns **/
 export async function main(ns: NS) {
 
-    interface Stock {
-        ticker: StockSymbol
-        forecast: number
-    }
+	interface Stock {
+		ticker: StockSymbol
+		forecast: number
+	}
 
 	function purchasableShares(ticker: StockSymbol) {
 		const moneyBuffer = getReservedMoney(ns)
-		ns.tprintf('Money buffer: %s', String(moneyBuffer))
 		const availableMoney = Math.max(ns.getServerMoneyAvailable('home') - moneyBuffer, 0)
 		const [ownedShares] = ns.stock.getPosition(ticker)
 		const availableShares = ns.stock.getMaxShares(ticker) - ownedShares
 		const stockPrice = ns.stock.getAskPrice(ticker)
 
 		const purchasableShares = Math.min(availableShares, availableMoney / stockPrice)
-		
+
 		if (purchasableShares * stockPrice < minimumTransactionValue) {
 			return 0
 		} else {
@@ -42,7 +41,7 @@ export async function main(ns: NS) {
 		const stockPrice = ns.stock.getAskPrice(ticker)
 
 		const purchasableShares = Math.min(availableShares, availableMoney / stockPrice)
-		
+
 		if (purchasableShares * stockPrice < minimumTransactionValue) {
 			return 0
 		} else {
@@ -61,7 +60,7 @@ export async function main(ns: NS) {
 		stocks.filter(s => s.forecast > buyShareThreshold).forEach(s => {
 			const sharesToBuy = purchasableShares(s.ticker)
 			if (sharesToBuy == 0) return
-			ns.print(ns.sprintf('Buying %d stocks in %s. Forecast [%4.2f]', sharesToBuy, s.ticker, s.forecast * 100))
+			ns.print(ns.sprintf('Buying %s stocks in %s. Forecast [%4.2f]', ns.nFormat(sharesToBuy, '0.00a'), s.ticker, s.forecast * 100))
 			if (purchasingEnabled) {
 				ns.stock.buy(s.ticker, sharesToBuy)
 			} else {
@@ -76,7 +75,7 @@ export async function main(ns: NS) {
 				const [ownedShares, avgPrice] = ns.stock.getPosition(s.ticker)
 				if (ownedShares > 0) {
 					const profit = ownedShares * (ns.stock.getBidPrice(s.ticker) - avgPrice) - commission * 2
-					ns.print(ns.sprintf('Selling %d shares in %s. Forecast [%4.2f]. Profit after commissions: $%dM', ownedShares, s.ticker, s.forecast * 100, profit / 1_000_000))
+					ns.print(ns.sprintf('Selling %d shares in %s. Forecast [%4.2f]. Profit after commissions: $%s', ownedShares, s.ticker, s.forecast * 100, ns.nFormat(profit, '0.00a')))
 					ns.stock.sell(s.ticker, ownedShares)
 				}
 			})
@@ -100,7 +99,8 @@ export async function main(ns: NS) {
 		}
 	}
 
-	ns.enableLog('ALL')
+	// ns.enableLog('ALL')
+	ns.disableLog('ALL')
 
 	if (!(ns.getOwnedSourceFiles().some(s => s.n == 8 && s.lvl > 1))) {
 		ns.print('Disabling shorting since required Source-File (8-2) was not found')
@@ -108,11 +108,13 @@ export async function main(ns: NS) {
 	}
 
 	while (true) {
-		const sortedStocks = ns.stock.getSymbols().map(decorateWithForecast).sort((a: Stock, b: Stock) => b.forecast - a.forecast)
-	
+		const sortedStocks = ns.stock.getSymbols()
+			.filter(s => s != 'JGN')
+			.map(decorateWithForecast).sort((a: Stock, b: Stock) => b.forecast - a.forecast)
+
 		purchaseGoodStock(sortedStocks)
 		sellPoorOwnedStock(sortedStocks)
-		
+
 		if (shortingEnabled) {
 			shortPoorStock(sortedStocks)
 		}

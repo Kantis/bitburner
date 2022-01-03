@@ -1,4 +1,4 @@
-import { localMaxIndexes, localMinIndexes, maxProfit } from "../src/cct/buysell";
+import { stockTraderOne, localMaxIndexes, localMinIndexes, maxProfit, stockTraderFour } from "../src/cct/buysell";
 
 test('buysell', () => {
     expect(localMaxIndexes([1, 2, 1, 3])).toStrictEqual([1, 3])
@@ -45,4 +45,15 @@ test('solve3', () => {
 test('solve2', () => {
     const prices = [85,75,39,86,85,162,57,83,21,109,196,67,157,183,195,7,26,150,164,22,62,7,1,18,29,200,55,20,115,150,82]
     expect(localMinIndexes(prices).length).toBe(localMaxIndexes(prices).length)
+})
+
+test('solve1', () => {
+    const prices = [45,66,18,13,196,123,151,160,183,12,169,51,155,32,19,177,2,93,160,18,143,98,76,152,28,68,105,46,154,179,55,64,165,29,39,178]
+    expect(stockTraderOne(prices)).toBe(183)
+})
+
+test('solve4', () => {
+    const prices = [48,100,92,88,121,11,72,111,113,194,128,67,141,153,112,78,193,156,131,99,143]
+    expect(stockTraderFour([1, prices])).toBe(183)
+    expect(stockTraderFour([2, prices])).toBe(309)
 })

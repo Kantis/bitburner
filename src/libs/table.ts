@@ -1,6 +1,6 @@
 import { joinToString, pad, repeat, TextAlignment } from "/libs/std.js";
 
-interface Column<T> {
+export interface Column<T> {
     label: string,
     width: number,
     extractor: (item: T) => string,

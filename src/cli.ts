@@ -37,6 +37,11 @@ const commands: Command[] = [
         aliases: ['fc'],
         description: 'lists available contracts',
         script: '/programs/find-contracts.js'
+    }, {
+        invocation: 'buy-tor',
+        aliases: [],
+        description: 'purchases tor router',
+        script: '/singularity/buy-tor.js'
     }
 ]
 

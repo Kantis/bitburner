@@ -1,5 +1,5 @@
 import { BitBurner, Host } from 'Bitburner'
-import { Analyzer, HackCounts } from '/hacking/analyze.js'
+import { Analyzer, HackCounts } from '/hacking/Analyzer.js'
 import { deepscan } from '/libs/lib.js'
 
 
@@ -10,26 +10,23 @@ import { deepscan } from '/libs/lib.js'
  * @returns A score for the server, determining it's attractiveness for running hacks against. Higher is better
  */
 export function score(ns: BitBurner, host: Host)  {
+	const analyzer = new Analyzer(ns)
+
 	// calculate cycle length (millis)
 	// calculate money per cycle
 	// calculate ram per cycle
 	// Score = money / (cycle length * ram per cycle)
 
-
 	// We currently allow up to 50% of money to be stolen per cycle.. Perhaps this should be dynamic based on server growth instead
 	const moneyPerCycle = 0.5 * ns.getServerMaxMoney(host)
 
 	// Cycle length: HGW (Hack + gorw + weaken) = length of longest hack (weaken) at minimum sec
-	const minSec = ns.getServerMinSecurityLevel(host)
 	const player = ns.getPlayer()
-
 	const server = ns.getServer(host)
 	server.hackDifficulty = server.minDifficulty
-
 	const cycleLengthMillis = ns.formulas.hacking.weakenTime(server, player)
 
 	// Ram = hacks to reach 50% stolen, grows to recover 50%, weakens to fix the hack and the grow
-	const analyzer = new Analyzer(ns)
 	const hacks = analyzer.maxHacks(host) 
 	const grows = analyzer.requiredGrowsPerHack(host) * hacks
 	const weakens = analyzer.requiredWeakenPerHack() * hacks + analyzer.requiredWeakenPerGrow() * grows

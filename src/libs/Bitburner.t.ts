@@ -3884,7 +3884,7 @@ declare module "Bitburner" {
       script: Script,
       host: Host,
       numThreads?: number,
-      ...args: string[]
+      ...args: any[]
     ): number;
 
     /**
@@ -4381,7 +4381,7 @@ declare module "Bitburner" {
     write(handle: Handle, data?: string | string[] | number, mode?: "w" | "a"): void;
 
     clearPort(port: Port): void;
-    writePort(port: Port, data?: string | string[] | number): void;
+    writePort(port: Port, data?: string | string[] | number): Promise<void>;
 
     /**
      * Attempts to write data to the specified Netscript Port.

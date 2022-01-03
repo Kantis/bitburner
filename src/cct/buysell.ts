@@ -15,12 +15,29 @@ import { add, range } from '/libs/std.js'
  * 
  * If no profit can be made, then the answer should be 0.
  */
-function stockTraderFour([transactions, prices]: [number, number[]]): number {
-    const lowest = Math.min(...prices)
-    const highest = Math.max(...prices)
-    const lowestIndex = prices.indexOf(lowest)
-    const highestIndex = prices.indexOf(highest)
+export function stockTraderFour([transactions, prices]: [number, number[]]): number {
+    const byPriceDesc = (i0: number, i1: number) => prices[i1] - prices[i0]
+    const byPriceAsc = (i0: number, i1: number) => prices[i0] - prices[i1]
+
+    const maximas = localMaxIndexes(prices).sort(byPriceDesc)
+    const minimas = localMinIndexes(prices).sort(byPriceAsc)
+
+    console.log('Sorted maximas', maximas.map(x => [x, prices[x]]))
+    console.log('Sorted minimas', minimas.map(x => [x, prices[x]]))
+
+
     return 0
+}
+
+export function stockTraderOne(prices: number[]): number {
+    const maximas = localMaxIndexes(prices)
+    const minimas = localMinIndexes(prices)
+
+    return Math.max(
+        ...maximas.map(max => [Math.min(...prices.slice(0, max)), prices[max]])
+            .filter(([a, _]) => a !== undefined)
+            .map(([a, b]) => b - a)
+    ) ?? 0
 }
 
 export function localMaxIndexes(numbers: number[]): number[] {
@@ -28,7 +45,7 @@ export function localMaxIndexes(numbers: number[]): number[] {
         return (index == numbers.length - 1 || numbers[index] > numbers[index + 1]) && (index == 0 || numbers[index] > numbers[index - 1])
     }
 
-    return range(numbers.length).filter(isLocalMax)
+    return range(0, numbers.length).filter(isLocalMax)
 }
 
 export function localMinIndexes(numbers: number[]): number[] {
@@ -36,7 +53,7 @@ export function localMinIndexes(numbers: number[]): number[] {
         return (index == numbers.length - 1 || numbers[index] < numbers[index + 1]) && (index == 0 || numbers[index] < numbers[index - 1])
     }
 
-    return range(numbers.length).filter(isLocalMin)
+    return range(0, numbers.length).filter(isLocalMin)
 }
 
 export function maxProfit(prices: number[]) {

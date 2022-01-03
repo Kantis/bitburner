@@ -17,5 +17,5 @@ export async function main(ns: BitBurner) {
         ns.tprintf('%s created with %d GB ram', createdHost, ns.getServerMaxRam(createdHost))
     }
 
-    rigServer(ns.args[0])
+    rigServer(ns.args[0] ?? 1.0)
 }    

@@ -58,6 +58,7 @@ export function printOwnedStock(ns: BitBurner, printFn: (s: string) => void) {
 
     const symbols = ns.stock.getSymbols()
     const portfolio = symbols
+        .filter(s => s != 'JGN')
         .map(s => getPosition(ns, s))
         .filter(pos => pos.owned > 0)
 

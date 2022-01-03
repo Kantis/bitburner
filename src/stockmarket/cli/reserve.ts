@@ -1,6 +1,6 @@
 import { BitBurner } from "Bitburner";
+import { reserveMoney } from "/libs/ports.js";
 
 export async function main(ns: BitBurner) {
-    ns.tprint('Starting stock watcher')
-    ns.spawn('/stockmarket/watcher.js', 1, '--tail')
+    await reserveMoney(ns, ns.args[0])
 }

@@ -1,5 +1,6 @@
 import { BitBurner, Host } from "Bitburner";
 import { count } from "console";
+import { Payload } from "/hacking/payloads.js";
 import { Server } from "/libs/lib.js";
 
 const minGrowThreshold = 1.05
@@ -72,7 +73,6 @@ export class Analyzer {
     }
 
     analyzeLimit(host: Host): HackCounts {
-        const growsPerHack = this.requiredGrowsPerHack(host)
         const hacks = this.isHackAllowed(host) ? this.maxHacks(host) : 0
         const grows = this.isGrowAllowed(host) ? this.countGrows(host) : 0
 
@@ -84,8 +84,9 @@ export class Analyzer {
         }
     }
 
-    analyzeActualLimit(scheduled: HackCounts, originalLimit: HackCounts): HackCounts {
-        const target = scheduled.host
+    analyzeActualLimit(originalLimit: HackCounts, scheduled?: HackCounts): HackCounts {
+        const target = originalLimit.host
+        scheduled = scheduled ?? originalLimit
 
         return {
             host: target,
@@ -95,9 +96,51 @@ export class Analyzer {
         }
     }
 
+    maximizeRun(target: Host, freeMemory: number): HackCounts {
+        this.ns.print(this.ns.sprintf('Maximizing run for %.2f GB memory', freeMemory))
+        const result = emptyCount(target)
+
+        result.weaken += Math.min(this.countWeaken(target), Math.floor(freeMemory / Payload.Weaken.requiredRam))
+        freeMemory -= result.weaken * Payload.Weaken.requiredRam
+
+        result.grow += Math.min(this.countGrows(target), Math.floor(freeMemory / (Payload.Grow.requiredRam + this.requiredWeakenPerGrow() * Payload.Weaken.requiredRam)))
+        result.weaken += this.requiredWeakenPerGrow() * result.grow
+        freeMemory -= result.grow * Payload.Grow.requiredRam + result.grow * this.requiredWeakenPerGrow() * Payload.Weaken.requiredRam
+
+        result.hack += Math.min(
+            Math.floor(
+                freeMemory / 
+                (
+                    Payload.Hack.requiredRam +
+                    Math.ceil(this.requiredGrowsPerHack(target)) * Payload.Grow.requiredRam +
+                    Math.ceil(this.requiredWeakenPerHack() + this.requiredWeakenPerGrow() * this.requiredGrowsPerHack(target)) * Payload.Grow.requiredRam
+                )
+            ),
+            this.maxHacks(target)
+        )
+
+        result.grow += Math.ceil(result.hack * this.requiredGrowsPerHack(target))
+        result.weaken += Math.ceil(result.hack * (this.requiredWeakenPerHack() + this.requiredWeakenPerGrow() * this.requiredGrowsPerHack(target)))
+
+        return result
+    }
+
     cooldown(host: Host): number {
         // this.ns.tprint('Weaken time: ' + this.ns.getWeakenTime(host))
         return Date.now() + this.ns.getWeakenTime(host)
+    }
+
+    minWeakenTime(host: Host): number {
+        const player = this.ns.getPlayer()
+        const server = this.ns.getServer(host)
+        server.hackDifficulty = server.minDifficulty
+        return this.ns.formulas.hacking.weakenTime(server, player)
+    }
+
+    requiredMem(toRun: HackCounts) {
+        return toRun.hack * Payload.Hack.requiredRam +
+            toRun.grow * Payload.Grow.requiredRam +
+            toRun.weaken * Payload.Weaken.requiredRam
     }
 }
 
@@ -119,6 +162,6 @@ export function emptyCount(host: Host): HackCounts {
     }
 }
 
-export function printCount(ns: BitBurner, count: HackCounts) {
-    ns.tprintf('%-20s {weaken: %d, grow: %d, hack: %d}', count.host, count.weaken, count.grow, count.hack)
+export function printCount(ns: BitBurner, printFn: (msg: string) => void, count: HackCounts) {
+    printFn(ns.sprintf('%-20s {weaken: %d, grow: %d, hack: %d}', count.host, count.weaken, count.grow, count.hack))
 }

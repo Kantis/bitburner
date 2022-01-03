@@ -1,13 +1,12 @@
 import * as std from '/libs/std.js'
 import { BitBurner as NS, Host } from 'Bitburner'
 import { Tree, TreeNode } from '/libs/trees.js'
-import { format } from 'path/posix'
 
 export function printServerTree(ns: NS) {
 	let visited = Array<string>()
 	function recurse(node: string, indent: number) {
 		visited.push(node)
-		let x = std.range(indent).map(i => ' ').reduce((a, b) => a + b, '')
+		let x = std.range(0, indent).map(i => ' ').reduce((a, b) => a + b, '')
 
 		ns.tprintf('%s+ %s (diff: %d, ports: %d, ram: %d)', x, node, ns.getServerRequiredHackingLevel(node), ns.getServerNumPortsRequired(node), ns.getServerMaxRam(node))
 
@@ -24,23 +23,26 @@ export interface Server {
 	level: number,
 	maxMoney: number,
 	maxRam: number,
+	freeRam: number,
 	minSecurity: number,
 	growthParam: number
+}
+
+export function toServer(ns: NS, host: Host): Server {
+	return {
+		name: host,
+		level: ns.getServerRequiredHackingLevel(host),
+		maxMoney: ns.getServerMaxMoney(host),
+		maxRam: ns.getServerMaxRam(host),
+		freeRam: ns.getServerMaxRam(host) - ns.getServerUsedRam(host),
+		minSecurity: ns.getServerMinSecurityLevel(host),
+		growthParam: ns.getServerGrowth(host)
+	}
 }
 
 export function deepscan(ns: NS): Tree<Server> {
 	let visited: Host[] = ['home']
 
-	function toServer(host: Host): Server {
-		return {
-			name: host,
-			level: ns.getServerRequiredHackingLevel(host),
-			maxMoney: ns.getServerMaxMoney(host),
-			maxRam: ns.getServerMaxRam(host),
-			minSecurity: ns.getServerMinSecurityLevel(host),
-			growthParam: ns.getServerGrowth(host)
-		}
-	}
 
 	function recurse(node: Host): TreeNode<Server>[] {
 		let children = ns.scan(node)
@@ -51,7 +53,7 @@ export function deepscan(ns: NS): Tree<Server> {
 				visited.push(s)
 				
 				return {
-					value: toServer(s),
+					value: toServer(ns, s),
 					children: recurse(s)
 				}
 			})
@@ -59,7 +61,15 @@ export function deepscan(ns: NS): Tree<Server> {
 
 	return new Tree(
 		{
-			value: { name: 'home', level: 0, maxMoney: 0, maxRam: ns.getServerMaxRam('home'), minSecurity: 100, growthParam: 0 },
+			value: { 
+				name: 'home', 
+				level: 0, 
+				maxMoney: 0, 
+				maxRam: ns.getServerMaxRam('home'), 
+				freeRam: ns.getServerMaxRam('home') - ns.getServerUsedRam('home'),
+				minSecurity: 100, 
+				growthParam: 0 
+			},
 			children: recurse('home')
 		}
 	)
