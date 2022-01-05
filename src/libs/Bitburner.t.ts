@@ -3430,6 +3430,7 @@ declare module "Bitburner" {
 
     getServer(host: Host): Server;
     getPlayer(): Player;
+    installBackdoor(): Promise<void>;
 
     /**
      * Arguments passed into a script can be accessed using a normal
@@ -3558,7 +3559,12 @@ declare module "Bitburner" {
 
     hackAnalyzeSecurity(threads: number): number;
     growthAnalyzeSecurity(threads: number): number;
-    weakenAnalyze(threads: number): number;
+
+    /**
+     * 
+     * @ramCost 1 GB
+     */
+    weakenAnalyze(threads: number, cores?: number): number;
 
     /**
      * Returns the chance you have of successfully hacking the specified server.
@@ -3589,7 +3595,7 @@ declare module "Bitburner" {
      * @param {number} growthAmount Multiplicative factor by which the server is grown. Decimal form..
      * @returns {number} The amount of {@link grow} calls needed to grow the specified server by the specified amount
      */
-    growthAnalyze(host: Host, growthAmount: number): number;
+    growthAnalyze(host: Host, growthAmount: number, cores?: number): number;
 
     /**
      * Suspends the script for n milliseconds.
@@ -3718,7 +3724,7 @@ declare module "Bitburner" {
      * @param {string} host IP or hostname of the server to scan.
      * @param {boolean} hostnames Optional boolean specifying whether the function should output hostnames (if true) or IP addresses (if false).
      */
-    tail(fn?: Script, ip?: Host, ...args: any[]): void;
+    tail(fn?: (Script | number), ip?: Host, ...args: any[]): void;
 
     /**
      * Returns an array containing the hostnames or IPs of all servers that are one
@@ -4016,7 +4022,7 @@ declare module "Bitburner" {
       source: | Host,
       // tslint:disable-next-line:unified-signatures
       destination: Host
-    ): boolean;
+    ): Promise<boolean>;
 
     /**
      * Returns an array with the filenames of all files on the specified server
@@ -4205,7 +4211,14 @@ declare module "Bitburner" {
      */
     getServerNumPortsRequired(host: Host): number;
 
+    /**
+     * @ramCost 0.05 GB
+     */
     getServerMaxRam(host: Host): number;
+
+    /**
+     * @ramCost 0.05 GB
+     */
     getServerUsedRam(host: Host): number;
 
     /**
@@ -4378,10 +4391,12 @@ declare module "Bitburner" {
      * @param {string} data Data to write.
      * @param {string} mode Defines the write mode. Only valid when writing to text files.
      */
-    write(handle: Handle, data?: string | string[] | number, mode?: "w" | "a"): void;
+    write(handle: string, data?: string | string[] | number, mode?: "w" | "a"): void;
 
+    readPort(port: Port): any;
     clearPort(port: Port): void;
     writePort(port: Port, data?: string | string[] | number): Promise<void>;
+    tryWritePort(port: Port, data?: string | string[] | number): Promise<boolean>;
 
     /**
      * Attempts to write data to the specified Netscript Port.

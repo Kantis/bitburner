@@ -1,4 +1,5 @@
 {
     "bitburner.scriptRoot": "./dist/",
-    "bitburner.authToken": "RvkcFybB+WV7HwUMG6INxQrw5O2Lyde+50pFECelWEnsX5cckHEiJpo5ekG8aOGR"
+    "bitburner.authToken": "RvkcFybB+WV7HwUMG6INxQrw5O2Lyde+50pFECelWEnsX5cckHEiJpo5ekG8aOGR",
+    "bitburner.fileWatcher.enable": true
 }

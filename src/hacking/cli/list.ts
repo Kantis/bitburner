@@ -1,11 +1,13 @@
-import { Server, toServer } from '/libs/lib.js'
+import { Server } from '/libs/types.t.js'
+import { toServer } from '/libs/lib.js'
 import { BitBurner as NS } from 'Bitburner'
 import { Column, printTable } from '/libs/table.js'
 import { listTargets, score } from '/hacking/targeting.js'
+import { readTargets } from '/libs/ports.js'
 
 /** @param {NS} ns **/
 export async function main(ns: NS) {
-    const targets = (await listTargets(ns)).map(s => toServer(ns, s.host))
+    const fromPort = ns.args[0]
 
     const columns: Column<Server>[] = [
         {
@@ -23,7 +25,7 @@ export async function main(ns: NS) {
             )
         }, {
             label: 'Score',
-            width: 7,
+            width: 12,
             extractor: s => String(Math.round(score(ns, s.name)))
         }, {
             label: 'Security',
@@ -32,5 +34,14 @@ export async function main(ns: NS) {
         }
     ]
 
-    printTable(targets, columns, ns.tprintf)
+    if (fromPort) {
+        const targets = await readTargets(ns)
+        printTable(targets.map(t => toServer(ns, t.host)), columns, ns.tprintf)
+        ns.tprintf('Printed targets used by hackd')
+    }
+    else {
+        const targets = (await listTargets(ns)).map(s => toServer(ns, s.host))
+        printTable(targets, columns, ns.tprintf)
+        ns.tprintf('Printed optimal targets, as considered by targeting.js')
+    }
 }

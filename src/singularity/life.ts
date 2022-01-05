@@ -50,7 +50,8 @@ export async function main(ns: BitBurner) {
     const isNotRunningOnHome = (script: string) => !ns.scriptRunning(script, 'home')
     const runOnHome = (script: string) => {
         ns.tprint('Starting ' + script)
-        ns.run(script)
+        const pid = ns.run(script)
+        ns.tail(pid)
     }
 
     function runDaemons(daemons: string[]) {
@@ -61,8 +62,17 @@ export async function main(ns: BitBurner) {
     ns.disableLog('getServerMoneyAvailable')
     ns.disableLog('sleep')
 
+    ns.run('/hacking/targeting.js', 1, '--write')
+    await ns.sleep(100)
+
     const factionOrder: FactionName[] = ['CyberSec', 'Tian Di Hui', 'NiteSec', 'The Black Hand', 'Chongqing', 'BitRunners']
-    runDaemons(['/hacking/hackd.js', '/hacking/infectd.js'])
+    runDaemons(
+        [
+            '/event/hacked-server-daemon.js',
+            '/hacking/hackd.js', 
+            '/hacking/infectd.js'
+        ]
+    )
 
     while (true) {
         const player = ns.getPlayer()
@@ -73,6 +83,13 @@ export async function main(ns: BitBurner) {
             .forEach(ns.joinFaction)
 
         purchaseTorAndPrograms(player, money)
+
+        ns.getCharacterInformation().company
+        if (ns.getCharacterInformation().workRepGain >= 400_000) {
+            ns.tprintf('WARN: Stopping work after achieving 400k rep')
+            ns.stopAction()
+            ns.workForFaction('BitRunners', 'hacking')
+        }
 
         await ns.sleep(1000)
     }

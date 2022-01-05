@@ -109,7 +109,6 @@ export async function main(ns: NS) {
 
 	while (true) {
 		const sortedStocks = ns.stock.getSymbols()
-			.filter(s => s != 'JGN')
 			.map(decorateWithForecast).sort((a: Stock, b: Stock) => b.forecast - a.forecast)
 
 		purchaseGoodStock(sortedStocks)

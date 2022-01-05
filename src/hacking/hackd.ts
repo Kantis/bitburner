@@ -1,20 +1,32 @@
 import { BitBurner as NS, Host, Script } from 'Bitburner'
-import { deepscan, maxThreads } from '/libs/lib.js'
-import { Analyzer, emptyCount, HackCounts, printCount } from '/hacking/Analyzer.js'
-import { listTargets, score } from '/hacking/targeting.js'
+import { deepscan } from '/libs/scan.js'
+import { maxThreads } from '/libs/lib.js'
+import { Analyzer, emptyCount, HackCounts, calculateMemoryCost } from '/hacking/Analyzer.js'
+import { HackTarget } from '/libs/types.t.js'
 import { nextSecond } from '/libs/std.js'
 import { Payload } from '/hacking/payloads.js'
-import { nextTick } from 'process'
-import { getReservedMemory } from '/libs/ports.js'
+import { getReservedMemory, readTargets } from '/libs/ports.js'
+
+interface HostAndRam {
+	name: string
+	freeRam: number
+}
 
 /** @param {NS} ns **/
 export async function main(ns: NS) {
-	const analyzer = new Analyzer(ns)
+	function hasHackScripts(server: Host) {
+		return ns.ls(server, 'hack.js').length > 0
+	}
 
-	function availableServers() {
+	function availableServers(): HostAndRam[] {
 		return deepscan(ns)
 			.flatten()
-			.filter(s => ns.hasRootAccess(s.name))
+			.filter(hasHackScripts)
+			.filter(ns.hasRootAccess)
+			.map(s => ({
+				name: s,
+				freeRam: ns.getServerMaxRam(s) - ns.getServerUsedRam(s)
+			}))
 		//.filter(s => s.name != 'home')
 	}
 
@@ -26,7 +38,7 @@ export async function main(ns: NS) {
 		}
 
 		if (actualThreads > 0) {
-			ns.exec(script, hostname, actualThreads, target, targetTime);
+			ns.exec(script, hostname, actualThreads, target, targetTime, hostname);
 		}
 
 		return actualThreads
@@ -34,82 +46,99 @@ export async function main(ns: NS) {
 
 	function runScripts(hostname: Host, hacks: HackCounts[], targetTime: number) {
 		hacks.forEach(count => {
-			startScript(Payload.Hack.file, hostname, count.host, count.hack, targetTime)
-			startScript(Payload.Grow.file, hostname, count.host, count.grow, targetTime + 1)
-			startScript(Payload.Weaken.file, hostname, count.host, count.weaken, targetTime + 2)
+			const target = count.host
+			startScript(Payload.Hack.file, hostname, target, count.hack, targetTime)
+			startScript(Payload.Grow.file, hostname, target, count.grow, targetTime + 1)
+			startScript(Payload.Weaken.file, hostname, target, count.weaken, targetTime + 2)
 		})
 	}
 
-	async function distributeScripts() {
-		for (const s of availableServers()) {
-			await ns.scp(Payload.All.map(p => p.file), 'home', s.name)
-		}
-	}
+	const analyzer = new Analyzer(ns)
 
 	ns.disableLog('ALL')
-	ns.tprint('Starting hack daemon v2.0-ALPHA');
+	ns.tprintf('Starting hack daemon v2.0-RC1');
 
-	(await listTargets(ns)).forEach((item: HackCounts) => {
+	(await readTargets(ns)).forEach((item: HackTarget) => {
 		// printCount(ns, item)
-		ns.tprintf('%-20s %.2f', item.host, score(ns, item.host))
+		ns.tprintf('%-20s %.2f', item.host, item.score)
 	});
+
+	const untilNextFullSecond = nextSecond(Date.now()) - Date.now()
+	await ns.sleep(untilNextFullSecond)
 
 	while (true) {
 		const cycleStart = Date.now()
-		await distributeScripts()
 
 		// TODO: listTargets should return Host[] instead of HackCount[]
-		const targets = await listTargets(ns)
+		const targets = await readTargets(ns)
 		// const totals: Map<Host, HackCounts> = associateWith(targets.map(t => t.host), emptyCount)
 
 		const totalFreeMem = Math.max(0, availableServers()
 			.map(s => Math.floor(s.freeRam / 1.8) * 1.8).reduce((a, b) => a + b) - getReservedMemory(ns))
 
-		const target = targets[0]
-		const targetTime = nextSecond(Date.now() + analyzer.minWeakenTime(target.host))
-		const totalRun = analyzer.maximizeRun(target.host, totalFreeMem)
-		ns.print(JSON.stringify(totalRun))
-		printCount(ns, ns.print, totalRun)
+		var memUsed = 0
+		var targetCounter = 0
 
-		if (totalRun.grow == 0 && totalRun.hack == 0 && totalRun.weaken == 0 && totalFreeMem > 5) {
-			ns.tprintf('WARN: Generated empty run on %s. Consider allowing more targets. (Free mem: %.2f)', target.host, totalFreeMem)
-		} else if (analyzer.requiredMem(totalRun) < totalFreeMem) {
-			availableServers()
-				.sort((a, b) => b.freeRam - a.freeRam)
-				.filter(s => s.freeRam >= 1.8)
-				.forEach(s => {
-					var free = s.freeRam
-					if (s.name == 'home') {
-						ns.print(ns.sprintf('Reserving %.2f GB ram on Home', getReservedMemory(ns)))
-						free -= getReservedMemory(ns)
-					}
+		while (targetCounter < targets.length && memUsed / totalFreeMem < 0.5) {
 
-					if (free >= 1.75) {
-						ns.print(ns.sprintf('Scheduling %s [%.2f GB]', s.name, free))
-						const run = emptyCount(target.host)
+			const target = targets[targetCounter++]
+			var targetTime = Date.now() + target.minWeakenTime + 500
+			const totalRun = analyzer.maximizeRun(target.host, totalFreeMem)
+			// ns.print(JSON.stringify(totalRun))
+			// printCount(ns, ns.print, totalRun)
+			const requiredMem = calculateMemoryCost(totalRun)
 
-						// Step 1: Schedule grows
-						run.grow = Math.min(totalRun.grow, Math.floor(free / Payload.Grow.requiredRam))
-						totalRun.grow -= run.grow
-						free -= run.grow * Payload.Grow.requiredRam
+			if (requiredMem >= (totalFreeMem - memUsed)) {
+				continue
+			}
 
-						// Step 2: Schedule weakens
-						run.weaken = Math.min(totalRun.weaken, Math.floor(free / Payload.Weaken.requiredRam))
-						totalRun.weaken -= run.weaken
-						free -= run.weaken * Payload.Weaken.requiredRam
+			if (totalRun.grow == 0 && totalRun.hack == 0 && totalRun.weaken == 0 && totalFreeMem > 5) {
+				ns.print(ns.sprintf('WARN: Generated empty run on %s. Consider allowing more targets. (Free mem: %.2f)', target.host, totalFreeMem))
+			} else if (requiredMem < totalFreeMem) {
+				// ns.tprintf('Should run %d', runsToRun)
+				const toRun = new Map<Host, HackCounts[]>()
 
-						run.hack = Math.min(totalRun.hack, Math.floor(free / Payload.Hack.requiredRam))
-						totalRun.hack -= run.hack
-						free -= run.hack * Payload.Hack.requiredRam
+				availableServers()
+					.sort((a, b) => b.freeRam - a.freeRam)
+					.filter(s => s.freeRam >= 1.8)
+					.forEach(s => {
+						var free = s.freeRam
+						if (s.name == 'home') {
+							free -= getReservedMemory(ns)
+						}
 
-						runScripts(s.name, [run], targetTime)
-					}
-				})
-		} else {
-			ns.tprintf('Cant fit run into memory. %.2f GB available, required %.2f GB', totalFreeMem, analyzer.requiredMem(totalRun))
+						if (free >= 1.75) {
+							// ns.print(ns.sprintf('Scheduling %s [%.2f GB]', s.name, free))
+							const run = emptyCount(target.host)
+
+							// Step 1: Schedule grows
+							run.grow = Math.min(totalRun.grow, Math.floor(free / Payload.Grow.requiredRam))
+							totalRun.grow -= run.grow
+							free -= run.grow * Payload.Grow.requiredRam
+
+							// Step 2: Schedule weakens
+							run.weaken = Math.min(totalRun.weaken, Math.floor(free / Payload.Weaken.requiredRam))
+							totalRun.weaken -= run.weaken
+							free -= run.weaken * Payload.Weaken.requiredRam
+
+							run.hack = Math.min(totalRun.hack, Math.floor(free / Payload.Hack.requiredRam))
+							totalRun.hack -= run.hack
+							free -= run.hack * Payload.Hack.requiredRam
+
+							memUsed += calculateMemoryCost(run)
+
+							toRun.set(s.name, [run])
+						}
+					})
+
+				toRun.forEach((hacks, host) => runScripts(host, hacks, targetTime))
+
+			} else {
+				ns.tprintf('Cant fit run into memory. %.2f GB available, required %.2f GB', totalFreeMem, calculateMemoryCost(totalRun))
+			}
 		}
 
-		ns.print(ns.sprintf('Execution millis: %.2fms', Date.now() - cycleStart))
-		await ns.sleep(1000)
+		ns.print(ns.sprintf('Cycle execution time %.2f', Date.now() - cycleStart))
+		await ns.sleep(250)
 	}
 }

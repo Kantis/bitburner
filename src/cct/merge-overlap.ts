@@ -1,6 +1,6 @@
 import { firstOrNull, range } from "/libs/std.js";
 
-type Range = [number, number];
+export type Range = [number, number];
 
 export function mergeOverlapping(input: Range[]): Range[] {
     const min = Math.min(...input.flat())

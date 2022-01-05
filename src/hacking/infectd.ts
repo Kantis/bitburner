@@ -1,5 +1,6 @@
-import { deepscan } from '/libs/lib.js'
-import { BitBurner as NS } from 'Bitburner'
+import { deepscan } from '/libs/scan.js'
+import { BitBurner as NS, Host } from 'Bitburner'
+import { registerNewServer } from '/libs/ports.js'
 
 /** @param {NS} ns **/
 export async function main(ns: NS) {
@@ -33,27 +34,34 @@ export async function main(ns: NS) {
 		return result
 	}
 
+	async function crackServer(s: Host) {
+		if (hasBruteSsh()) { ns.brutessh(s) }
+		if (hasFtpCrack()) { ns.ftpcrack(s) }
+		if (hasRelaySmtp()) { ns.relaysmtp(s) }
+		if (hasHttpWorm()) { ns.httpworm(s) }
+		if (hasSqlInject()) { ns.sqlinject(s) }
+
+		ns.nuke(s)
+		ns.tprintf('Hacked %s', s)
+		await registerNewServer(ns, s)
+	}
+
 	ns.tprintf('running infect with %d hacks', availablePortHacks())
 
 	while (true) {
 		const hackingLevel = ns.getHackingLevel()
 		const servers = deepscan(ns)
 
-		servers
+		const crackableServers = servers
 			.flatten()
-			.filter(s => s.level <= hackingLevel)
-			.filter(s => !ns.hasRootAccess(s.name))
-			.filter(s => ns.getServerNumPortsRequired(s.name) <= availablePortHacks())
-			.forEach(s => {
-				if (hasBruteSsh()) { ns.brutessh(s.name) }
-				if (hasFtpCrack()) { ns.ftpcrack(s.name) }
-				if (hasRelaySmtp()) { ns.relaysmtp(s.name) }
-				if (hasHttpWorm()) { ns.httpworm(s.name) }
-				if (hasSqlInject()) { ns.sqlinject(s.name) }
+			.filter(s => ns.getServerRequiredHackingLevel(s) <= hackingLevel)
+			.filter(s => !ns.hasRootAccess(s))
+			.filter(s => ns.getServerNumPortsRequired(s) <= availablePortHacks())
 
-				ns.nuke(s.name)
-				ns.tprintf('Hacked %s', s.name)
-			})
+		for (const s of crackableServers) {
+			await crackServer(s)
+		}
+
 		await ns.sleep(1000)
 	}
 }

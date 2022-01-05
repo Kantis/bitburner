@@ -26,7 +26,7 @@ export async function main(ns: BitBurner) {
             invocation: 'auto', 
             aliases: ['up'],
             description: 'enables auto hacking', 
-            script: '/hacking/hackd.js'
+            script: '/hacking/cli/start.js'
         }, {
             invocation: 'reserve',
             aliases: ['r'],

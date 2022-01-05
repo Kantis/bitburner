@@ -21,30 +21,24 @@ function nextDir(d: Direction): Direction {
 }
 
 function* spiral(width: number, height: number): Generator<Point> {
-    console.log('W: ', width, 'H:', height)
     var dir: Direction = 'Right'
     var p: Point = [0, 0]
     var visited: Point[] = [p]
 
     yield p
-    console.log(p)
 
     while (visited.length < width * height) {
         const n = nextPoint(p, dir)
-        console.log('Prel next: ', n)
         const [n_x, n_y] = n
 
-        console.log(visited)
         if (visited.some(v => v[0] == n_x && v[1] == n_y) || n_x >= width || n_x < 0 || n_y >= height || n_y < 0) {
             dir = nextDir(dir)
-            console.log('New dir: ', dir)
             p = nextPoint(p, dir)
         } else {
             p = nextPoint(p, dir)
         }
 
         yield p
-        console.log(p)
         visited.push(p)
     }
 }

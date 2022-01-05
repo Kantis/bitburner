@@ -1,3 +1,4 @@
+import { notStrictEqual } from 'assert'
 import { BitBurner } from 'Bitburner'
 import { add, range } from '/libs/std.js'
 
@@ -40,9 +41,35 @@ export function stockTraderOne(prices: number[]): number {
     ) ?? 0
 }
 
+export function stockTraderTwo(prices: number[]): number {
+    var maximas = localMaxIndexes(prices)
+    var minimas = localMinIndexes(prices)
+
+    // Remove maximas preceding first minima
+    maximas = maximas.filter(i => i >= minimas[0])
+    // Remove minimas proceeding last maxima
+    minimas = minimas.filter(i => i <= maximas.slice(-1)[0])
+    console.log('filtered maximas', maximas)
+    console.log('filtered minimas', minimas)
+
+    var result = 0
+    for (const i in minimas) {
+        result += prices[maximas[i]] - prices[minimas[i]]
+    }
+
+    return result
+}
+
 export function localMaxIndexes(numbers: number[]): number[] {
     function isLocalMax(index: number) {
-        return (index == numbers.length - 1 || numbers[index] > numbers[index + 1]) && (index == 0 || numbers[index] > numbers[index - 1])
+        switch (index) {
+            // Last number
+            case numbers.length - 1: return numbers[index] > numbers[index - 1]
+            // First number
+            case 0: return numbers[index] >= numbers[index + 1]
+            // Others
+            default: return numbers[index] >= numbers[index + 1] && numbers[index] > numbers[index - 1]
+        }
     }
 
     return range(0, numbers.length).filter(isLocalMax)
@@ -50,7 +77,14 @@ export function localMaxIndexes(numbers: number[]): number[] {
 
 export function localMinIndexes(numbers: number[]): number[] {
     function isLocalMin(index: number) {
-        return (index == numbers.length - 1 || numbers[index] < numbers[index + 1]) && (index == 0 || numbers[index] < numbers[index - 1])
+        switch (index) {
+            // Last number
+            case numbers.length - 1: return numbers[index] < numbers[index - 1]
+            // First number
+            case 0: return numbers[index] <= numbers[index + 1]
+            // Others
+            default: return numbers[index] <= numbers[index + 1] && numbers[index] < numbers[index - 1]
+        }
     }
 
     return range(0, numbers.length).filter(isLocalMin)

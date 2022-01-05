@@ -1,7 +1,5 @@
 import { BitBurner, Host } from "Bitburner";
-import { count } from "console";
 import { Payload } from "/hacking/payloads.js";
-import { Server } from "/libs/lib.js";
 
 const minGrowThreshold = 1.05
 const allowHackThreshold = 1.4
@@ -13,13 +11,16 @@ export interface HackCounts {
     weaken: number
 }
 
+const HACK_SECURITY = 0.002
+const GROW_SEC = 0.004
+
 export class Analyzer {
     private ns: BitBurner
     readonly securityPerWeaken: number
 
     constructor(ns: BitBurner) {
         this.ns = ns
-        this.securityPerWeaken = Math.abs(ns.weakenAnalyze(1))
+        this.securityPerWeaken = 0.05 //Math.abs(ns.weakenAnalyze(1, 1)) // 1 GB
     }
 
     /**
@@ -28,7 +29,7 @@ export class Analyzer {
      * @param server the target to hack 
      */
     maxHacks(server: Host): number {
-        const perThread = this.ns.hackAnalyze(server)
+        const perThread = this.ns.hackAnalyze(server) // 1 GB
         return Math.max(0.5 / perThread, 1)
     }
 
@@ -46,20 +47,20 @@ export class Analyzer {
         let maxFactor = this.ns.getServerMaxMoney(target) / this.ns.getServerMoneyAvailable(target)
         if (maxFactor < minGrowThreshold) return 0
 
-        return this.ns.growthAnalyze(target, maxFactor)
+        return this.ns.growthAnalyze(target, maxFactor) // 1 GB
     }
 
     requiredGrowsPerHack(target: Host) {
-        return this.ns.growthAnalyze(target, 1.0 + this.ns.hackAnalyze(target))
+        return this.ns.growthAnalyze(target, 1.0 + this.ns.hackAnalyze(target), 1)
     }
 
     requiredWeakenPerHack() {
-        return this.ns.hackAnalyzeSecurity(1) / this.securityPerWeaken
+        return 0.04 // this.ns.hackAnalyzeSecurity(1) / this.securityPerWeaken // 1 GB
     }
 
     requiredWeakenPerGrow() {
-        let result = this.ns.growthAnalyzeSecurity(1) / this.securityPerWeaken * 10.0 // Temp 2x modifier , since sec is rising
-        return result
+        // let result = this.ns.growthAnalyzeSecurity(1) / this.securityPerWeaken 
+        return 0.08 // result
     }
 
     isHackAllowed(target: Host) {
@@ -97,19 +98,19 @@ export class Analyzer {
     }
 
     maximizeRun(target: Host, freeMemory: number): HackCounts {
-        this.ns.print(this.ns.sprintf('Maximizing run for %.2f GB memory', freeMemory))
+        // this.ns.print(this.ns.sprintf('Maximizing run for %.2f GB memory', freeMemory))
         const result = emptyCount(target)
 
-        result.weaken += Math.min(this.countWeaken(target), Math.floor(freeMemory / Payload.Weaken.requiredRam))
+        result.weaken = Math.min(Math.ceil(this.countWeaken(target)), Math.floor(freeMemory / Payload.Weaken.requiredRam))
         freeMemory -= result.weaken * Payload.Weaken.requiredRam
 
-        result.grow += Math.min(this.countGrows(target), Math.floor(freeMemory / (Payload.Grow.requiredRam + this.requiredWeakenPerGrow() * Payload.Weaken.requiredRam)))
-        result.weaken += this.requiredWeakenPerGrow() * result.grow
+        result.grow = Math.min(this.countGrows(target), Math.floor(freeMemory / (Payload.Grow.requiredRam + Math.ceil(this.requiredWeakenPerGrow() * Payload.Weaken.requiredRam))))
+        result.weaken += Math.ceil(this.requiredWeakenPerGrow() * result.grow)
         freeMemory -= result.grow * Payload.Grow.requiredRam + result.grow * this.requiredWeakenPerGrow() * Payload.Weaken.requiredRam
 
-        result.hack += Math.min(
+        result.hack = Math.min(
             Math.floor(
-                freeMemory / 
+                freeMemory /
                 (
                     Payload.Hack.requiredRam +
                     Math.ceil(this.requiredGrowsPerHack(target)) * Payload.Grow.requiredRam +
@@ -124,24 +125,12 @@ export class Analyzer {
 
         return result
     }
+}
 
-    cooldown(host: Host): number {
-        // this.ns.tprint('Weaken time: ' + this.ns.getWeakenTime(host))
-        return Date.now() + this.ns.getWeakenTime(host)
-    }
-
-    minWeakenTime(host: Host): number {
-        const player = this.ns.getPlayer()
-        const server = this.ns.getServer(host)
-        server.hackDifficulty = server.minDifficulty
-        return this.ns.formulas.hacking.weakenTime(server, player)
-    }
-
-    requiredMem(toRun: HackCounts) {
-        return toRun.hack * Payload.Hack.requiredRam +
-            toRun.grow * Payload.Grow.requiredRam +
-            toRun.weaken * Payload.Weaken.requiredRam
-    }
+export function calculateMemoryCost(toRun: HackCounts) {
+    return toRun.hack * Payload.Hack.requiredRam +
+        toRun.grow * Payload.Grow.requiredRam +
+        toRun.weaken * Payload.Weaken.requiredRam
 }
 
 export function add(a: HackCounts, b: HackCounts): HackCounts {

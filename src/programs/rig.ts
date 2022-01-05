@@ -1,6 +1,11 @@
-import { BitBurner } from "Bitburner";
+import { BitBurner, Host } from "Bitburner";
+import { Payload } from "/hacking/payloads.js";
 
 export async function main(ns: BitBurner) {
+    async function distributeScripts(s: Host) {
+        await ns.scp(Payload.All.map(p => p.file), 'home', s)
+    }
+
     async function rigServer(maxFraction: number) {
         var ram = 20
         const availMoney = ns.getServerMoneyAvailable('home')
@@ -15,6 +20,8 @@ export async function main(ns: BitBurner) {
         ns.tprint(ram)
         const createdHost = ns.purchaseServer('hn', Math.pow(2, ram))
         ns.tprintf('%s created with %d GB ram', createdHost, ns.getServerMaxRam(createdHost))
+
+        await distributeScripts(createdHost)
     }
 
     rigServer(ns.args[0] ?? 1.0)

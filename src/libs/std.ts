@@ -6,14 +6,27 @@ export function range(startInclusive: number = 0, endExclusive: number): number[
 	return [...Array(Math.floor(endExclusive)).keys()].slice(startInclusive)
 }
 
+function arrayContentEquals(a: any[], b: any[]): boolean {
+	return a.every((val, index) => val == b[index])
+}
+
 export function uniq<T>(a: T[]): T[] {
 	var result = Array<T>()
 
-	a.forEach(function (item) {
-		if (result.indexOf(item) < 0) {
-			result.push(item)
-		}
-	})
+	if (Array.isArray(a[0])) {
+		a.forEach(innerArr => {
+			// @ts-ignore
+			if (!result.some(otherArr => arrayContentEquals(innerArr, otherArr))) {
+				result.push(innerArr)
+			}
+		})
+	} else {
+		a.forEach(item => {
+			if (result.indexOf(item) < 0) {
+				result.push(item)
+			}
+		})
+	}
 
 	return result
 }
@@ -99,7 +112,7 @@ export function pad(s: string, width: number, { align = 'Left', padLeft = 1, pad
 
 export function firstOrNull<T>(ts: T[], predicate: (t: T) => boolean): (T | undefined) {
 	for (const t of ts) {
-		if (predicate(t)) return t		
+		if (predicate(t)) return t
 	}
 	return undefined
 }
